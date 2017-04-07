@@ -182,7 +182,7 @@ frappe.listview_settings['File'] = {
 			doclist.current_folder_name = route.slice(-1)[0];
 		}
 
-		if(!doclist.current_folder || doclist.current_folder=="List") {
+		if(!doclist.current_folder) {
 			doclist.current_folder = frappe.boot.home_folder;
 			doclist.current_folder_name = __("Home");
 		}

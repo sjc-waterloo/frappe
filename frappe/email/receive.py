@@ -322,7 +322,7 @@ class EmailServer:
 
 		return error_msg
 
-	def update_flag(self, uid_list={}):
+	def update_flag(self, uid_list=[], operation="Read"):
 		""" set all uids mails the flag as seen  """
 
 		if not uid_list:
@@ -331,11 +331,10 @@ class EmailServer:
 		if not self.connect():
 			return
 
-		self.imap.select("Inbox")
-		for uid, operation in uid_list.iteritems():
-			if not uid: continue
+		op = "+FLAGS" if operation == "Read" else "-FLAGS"
 
-			op = "+FLAGS" if operation == "Read" else "-FLAGS"
+		self.imap.select("Inbox")
+		for uid in uid_list:
 			try:
 				self.imap.uid('STORE', uid, op, '(\\SEEN)')
 			except Exception as e:
@@ -409,7 +408,7 @@ class Email:
 	def decode_email(self, email):
 		if not email: return 
 		decoded = ""
-		for part, encoding in decode_header(email.replace("\""," ").replace("\'"," ")):
+		for part, encoding in decode_header(email):
 			if encoding:
 				decoded += part.decode(encoding)
 			else:

@@ -9,10 +9,10 @@ from frappe.utils import cstr
 from frappe.utils.file_manager import save_file, remove_file_by_url
 from frappe.website.utils import get_comment_list
 from frappe.custom.doctype.customize_form.customize_form import docfield_properties
+from frappe.integration_broker.doctype.integration_service.integration_service import get_integration_controller
 from frappe.utils.file_manager import get_max_file_size
 from frappe.modules.utils import export_module_json, get_doc_module
 from urllib import urlencode
-from frappe.integrations.utils import get_payment_gateway_controller
 
 class WebForm(WebsiteGenerator):
 	website = frappe._dict(
@@ -156,7 +156,7 @@ def get_context(context):
 		context.parents = self.get_parents(context)
 
 		if self.breadcrumbs:
-			context.parents = frappe.safe_eval(self.breadcrumbs)
+			context.parents = eval(self.breadcrumbs)
 
 		context.has_header = ((frappe.form_dict.name or frappe.form_dict.new)
 			and (frappe.session.user!="Guest" or not self.login_required))
@@ -221,7 +221,7 @@ def get_context(context):
 
 	def get_payment_gateway_url(self, doc):
 		if self.accept_payment:
-			controller = get_payment_gateway_controller(self.payment_gateway)
+			controller = get_integration_controller(self.payment_gateway)
 
 			title = "Payment for {0} {1}".format(doc.doctype, doc.name)
 			amount = self.amount

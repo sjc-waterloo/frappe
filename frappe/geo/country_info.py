@@ -24,7 +24,8 @@ def get_all():
 def get_country_timezone_info():
 	return {
 		"country_info": get_all(),
-		"all_timezones": get_all_timezones()
+		"all_timezones": get_all_timezones(),
+		"default_country": 'Taiwan'
 	}
 
 def get_translated_dict():

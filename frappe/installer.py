@@ -43,7 +43,7 @@ def install_db(root_login="root", root_password=None, db_name=None, source_sql=N
 
 	create_auth_table()
 	setup_global_search_table()
-	create_user_settings_table()
+	create_list_settings_table()
 
 	frappe.flags.in_install_db = False
 
@@ -70,7 +70,7 @@ def create_database_and_user(force, verbose):
 	# close root connection
 	frappe.db.close()
 
-def create_user_settings_table():
+def create_list_settings_table():
 	frappe.db.sql_ddl("""create table if not exists __UserSettings (
 		`user` VARCHAR(180) NOT NULL,
 		`doctype` VARCHAR(180) NOT NULL,
@@ -99,7 +99,6 @@ def get_root_connection(root_login='root', root_password=None):
 	return frappe.local.flags.root_connection
 
 def install_app(name, verbose=False, set_as_patched=True):
-	frappe.flags.in_install = name
 	frappe.clear_cache()
 	app_hooks = frappe.get_hooks(app_name=name)
 	installed_apps = frappe.get_installed_apps()
@@ -275,8 +274,8 @@ def update_site_config(key, value, validate=True, site_config_path=None):
 		value = int(value)
 
 	# boolean
-	if value == 'false': value = False
-	if value == 'true': value = True
+	if value in ("false", "true"):
+		value = eval(value.title())
 
 	# remove key if value is None
 	if value == "None":

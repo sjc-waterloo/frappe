@@ -45,14 +45,6 @@ class EmailAccount(Document):
 		else:
 			self.login_id = None
 
-		duplicate_email_account = frappe.get_all("Email Account", filters={
-			"email_id": self.email_id,
-			"name": ("!=", self.name)
-		})
-		if duplicate_email_account:
-			frappe.throw(_("Email id must be unique, Email Account is already exist \
-				for {0}".format(frappe.bold(self.email_id))))
-
 		if frappe.local.flags.in_patch or frappe.local.flags.in_test:
 			return
 
@@ -86,37 +78,39 @@ class EmailAccount(Document):
 
 	def on_update(self):
 		"""Check there is only one default of each type."""
-		from frappe.core.doctype.user.user import ask_pass_update, setup_user_email_inbox
-
 		self.there_must_be_only_one_default()
-		setup_user_email_inbox(email_account=self.name, awaiting_password=self.awaiting_password,
-			email_id=self.email_id, enable_outgoing=self.enable_outgoing)
+		if self.awaiting_password:
+			# push values to user_emails
+			frappe.db.sql("""UPDATE `tabUser Email` SET awaiting_password = 1
+						  WHERE email_account = %(account)s""", {"account": self.name})
+		else:
+			frappe.db.sql("""UPDATE `tabUser Email` SET awaiting_password = 0
+									  WHERE email_account = %(account)s""", {"account": self.name})
+		from frappe.core.doctype.user.user import ask_pass_update
+		ask_pass_update()
 
 	def there_must_be_only_one_default(self):
 		"""If current Email Account is default, un-default all other accounts."""
-		for field in ("default_incoming", "default_outgoing"):
-			if not self.get(field):
-				continue
-
-			for email_account in frappe.get_all("Email Account", filters={ field: 1 }):
-				if email_account.name==self.name:
-					continue
-
-				email_account = frappe.get_doc("Email Account", email_account.name)
-				email_account.set(field, 0)
-				email_account.save()
+		for fn in ("default_incoming", "default_outgoing"):
+			if self.get(fn):
+				for email_account in frappe.get_all("Email Account",
+					filters={fn: 1}):
+					if email_account.name==self.name:
+						continue
+					email_account = frappe.get_doc("Email Account",
+						email_account.name)
+					email_account.set(fn, 0)
+					email_account.save()
 
 	@frappe.whitelist()
-	def get_domain(self, email_id):
+	def get_domain(self,email_id):
 		"""look-up the domain and then full"""
 		try:
 			domain = email_id.split("@")
-			fields = [
-				"name as domain", "use_imap", "email_server",
-				"use_ssl", "smtp_server", "use_tls",
-				"smtp_port"
-			]
-			return frappe.db.get_value("Email Domain", domain[1], fields, as_dict=True)
+			return frappe.db.sql("""select name,use_imap,email_server,use_ssl,smtp_server,use_tls,smtp_port
+			from `tabEmail Domain`
+			where name = %s
+			""",domain[1],as_dict=1)
 		except Exception:
 			pass
 
@@ -232,7 +226,7 @@ class EmailAccount(Document):
 		def get_seen(status):
 			if not status:
 				return None
-			seen = 1 if status == "SEEN" else 0
+			seen = 0 if status == "SEEN" else 1
 			return seen
 
 		if self.enable_incoming:
@@ -247,9 +241,6 @@ class EmailAccount(Document):
 				email_sync_rule = self.build_email_sync_rule()
 
 				email_server = self.get_incoming_server(in_receive=True, email_sync_rule=email_sync_rule)
-				if not email_server:
-					return
-
 				emails = email_server.get_messages()
 
 				incoming_mails = emails.get("latest_messages")
@@ -566,10 +557,7 @@ class EmailAccount(Document):
 
 	def on_trash(self):
 		"""Clear communications where email account is linked"""
-		from frappe.core.doctype.user.user import remove_user_email_inbox
-
 		frappe.db.sql("update `tabCommunication` set email_account='' where email_account=%s", self.name)
-		remove_user_email_inbox(email_account=self.name)
 
 	def after_rename(self, old, new, merge=False):
 		frappe.db.set_value("Email Account", new, "email_account_name", new)
@@ -581,49 +569,50 @@ class EmailAccount(Document):
 		if self.email_sync_option == "ALL":
 			max_uid = get_max_email_uid(self.name)
 			last_uid = max_uid + int(self.initial_sync_count or 100) if max_uid == 1 else "*"
+			print "UID {}:{}".format(max_uid, last_uid)
 			return "UID {}:{}".format(max_uid, last_uid)
 		else:
 			return self.email_sync_option or "UNSEEN"
 
-	def mark_emails_as_read_unread(self):
+	def mark_emails_as_read(self):
 		""" mark Email Flag Queue of self.email_account mails as read"""
+		if not self.use_imap:
+			return
+
+		flags = frappe.db.sql("""select name, uid from `tabCommunication` where sent_or_received = "Received" 
+			and seen = 0 and communication_medium = "Email" and email_account='{email_account}' and 
+			ifnull(_seen, '') = ''""".format(email_account=self.name), as_dict=True)
+
+		uid_list = list(set([ flag.get("uid") for flag in flags ]))
+		if flags and uid_list:
+			email_server = self.get_incoming_server()
+			email_server.update_flag(uid_list=uid_list)
+
+			docnames = ",".join([ "'%s'"%flag.get("name") for flag in flags ])
+			frappe.db.sql(""" update `tabCommunication` set seen=1 
+				where name in ({docnames})""".format(docnames=docnames))
+
+	def mark_emails_as_unread(self):
+		""" mark Email Flag Queue of self.email_account mails as unread"""
 
 		if not self.use_imap:
 			return
 
-		flags = frappe.db.sql("""select name, communication, uid, action from 
-			`tabEmail Flag Queue` where is_completed=0 and email_account='{email_account}'
-			""".format(email_account=self.name), as_dict=True)
+		flags = frappe.db.sql("""select name, communication, uid from `tabEmail Flag Queue`
+			where action = "Unread" and is_completed=0 """.format(email_account=self.name), as_dict=True)
 
-		uid_list = { flag.get("uid", None): flag.get("action", "Read") for flag in flags }
+		uid_list = list(set([ flag.get("uid") for flag in flags ]))
 		if flags and uid_list:
 			email_server = self.get_incoming_server()
-			if not email_server:
-				return
+			email_server.update_flag(uid_list=uid_list, operation="Unread")
 
-			email_server.update_flag(uid_list=uid_list)
-
-			# mark communication as read
-			docnames =  ",".join([ "'%s'"%flag.get("communication") for flag in flags \
-				if flag.get("action") == "Read" ])
-			self.set_communication_seen_status(docnames, seen=1)
-
-			# mark communication as unread
-			docnames =  ",".join([ "'%s'"%flag.get("communication") for flag in flags \
-				if flag.get("action") == "Unread" ])
-			self.set_communication_seen_status(docnames, seen=0)
+			docnames = ",".join([ "'%s'"%flag.get("communication") for flag in flags ])
+			frappe.db.sql(""" update `tabCommunication` set seen=0 
+				where name in ({docnames})""".format(docnames=docnames))
 
 			docnames = ",".join([ "'%s'"%flag.get("name") for flag in flags ])
 			frappe.db.sql(""" update `tabEmail Flag Queue` set is_completed=1 
 				where name in ({docnames})""".format(docnames=docnames))
-
-	def set_communication_seen_status(self, docnames, seen=0):
-		""" mark Email Flag Queue of self.email_account mails as read"""
-		if not docnames:
-			return
-
-		frappe.db.sql(""" update `tabCommunication` set seen={seen} 
-			where name in ({docnames})""".format(docnames=docnames, seen=seen))
 
 @frappe.whitelist()
 def get_append_to(doctype=None, txt=None, searchfield=None, start=None, page_len=None, filters=None):
@@ -700,7 +689,8 @@ def pull_from_email_account(email_account):
 	email_account.receive()
 
 	# mark Email Flag Queue mail as read
-	email_account.mark_emails_as_read_unread()
+	email_account.mark_emails_as_read()
+	email_account.mark_emails_as_unread()
 
 def get_max_email_uid(email_account):
 	# get maximum uid of emails

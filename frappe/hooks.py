@@ -7,10 +7,8 @@ app_publisher = "Frappe Technologies"
 app_description = "Full stack web framework with Python, Javascript, MariaDB, Redis, Node"
 app_icon = "octicon octicon-circuit-board"
 app_color = "orange"
-source_link = "https://github.com/frappe/frappe"
+source_link = "https://gitlab.moshimori.com/ERP/frappe"
 app_license = "MIT"
-
-develop_version = '8.0.0-beta'
 
 app_email = "info@frappe.io"
 
@@ -78,10 +76,8 @@ permission_query_conditions = {
 	"ToDo": "frappe.desk.doctype.todo.todo.get_permission_query_conditions",
 	"User": "frappe.core.doctype.user.user.get_permission_query_conditions",
 	"Note": "frappe.desk.doctype.note.note.get_permission_query_conditions",
-	"Kanban Board": "frappe.desk.doctype.kanban_board.kanban_board.get_permission_query_conditions",
 	"Contact": "frappe.geo.address_and_contact.get_permission_query_conditions_for_contact",
-	"Address": "frappe.geo.address_and_contact.get_permission_query_conditions_for_address",
-	"Communication": "frappe.core.doctype.communication.communication.get_permission_query_conditions_for_communication"
+	"Address": "frappe.geo.address_and_contact.get_permission_query_conditions_for_address"
 }
 
 has_permission = {
@@ -89,7 +85,6 @@ has_permission = {
 	"ToDo": "frappe.desk.doctype.todo.todo.has_permission",
 	"User": "frappe.core.doctype.user.user.has_permission",
 	"Note": "frappe.desk.doctype.note.note.has_permission",
-	"Kanban Board": "frappe.desk.doctype.kanban_board.kanban_board.has_permission",
 	"Contact": "frappe.geo.address_and_contact.has_permission",
 	"Address": "frappe.geo.address_and_contact.has_permission",
 	"Communication": "frappe.core.doctype.communication.communication.has_permission",
@@ -128,14 +123,11 @@ scheduler_events = {
 		"frappe.email.doctype.email_account.email_account.pull",
 		"frappe.email.doctype.email_account.email_account.notify_unreplied",
 		"frappe.oauth.delete_oauth2_data",
-		"frappe.integrations.doctype.razorpay_settings.razorpay_settings.capture_payment"
 	],
 	"hourly": [
 		"frappe.model.utils.link_count.update_link_count",
-		'frappe.model.utils.user_settings.sync_user_settings',
-		"frappe.utils.error.collect_error_snapshots",
-		"frappe.desk.page.backups.backups.delete_downloadable_backups",
-		"frappe.limits.update_space_usage"
+		'frappe.model.utils.list_settings.sync_list_settings',
+		"frappe.utils.error.collect_error_snapshots"
 	],
 	"daily": [
 		"frappe.email.queue.clear_outbox",
@@ -147,13 +139,11 @@ scheduler_events = {
 		"frappe.async.remove_old_task_logs",
 		"frappe.utils.scheduler.disable_scheduler_on_expiry",
 		"frappe.utils.scheduler.restrict_scheduler_events_if_dormant",
+		"frappe.limits.update_space_usage",
 		"frappe.email.doctype.auto_email_report.auto_email_report.send_daily",
+		"frappe.desk.page.backups.backups.delete_downloadable_backups",
 		"frappe.core.doctype.feedback_request.feedback_request.delete_feedback_request",
-		"frappe.core.doctype.authentication_log.authentication_log.clear_authentication_logs",
-		"frappe.integrations.doctype.dropbox_settings.dropbox_settings.take_backups_daily"
-	],
-	"weekly": [
-		"frappe.integrations.doctype.dropbox_settings.dropbox_settings.take_backups_weekly"
+		"frappe.core.doctype.authentication_log.authentication_log.clear_authentication_logs"
 	],
 	"monthly": [
 		"frappe.email.doctype.auto_email_report.auto_email_report.send_monthly"
@@ -187,3 +177,5 @@ bot_parsers = [
 
 setup_wizard_exception = "frappe.desk.page.setup_wizard.setup_wizard.email_setup_wizard_exception"
 before_write_file = "frappe.limits.validate_space_limit"
+
+integration_services = ["PayPal", "Razorpay", "Dropbox", "LDAP"]

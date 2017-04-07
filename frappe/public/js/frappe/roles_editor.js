@@ -1,7 +1,6 @@
 frappe.RoleEditor = Class.extend({
-	init: function(wrapper, frm) {
+	init: function(wrapper) {
 		var me = this;
-		this.frm = frm;
 		this.wrapper = wrapper;
 		$(wrapper).html('<div class="help">' + __("Loading") + '...</div>')
 		return frappe.call({
@@ -12,8 +11,8 @@ frappe.RoleEditor = Class.extend({
 
 				// refresh call could've already happened
 				// when all role checkboxes weren't created
-				if(me.frm.doc) {
-					me.frm.roles_editor.show();
+				if(cur_frm.doc) {
+					cur_frm.roles_editor.show();
 				}
 			}
 		});
@@ -54,7 +53,7 @@ frappe.RoleEditor = Class.extend({
 
 		$(this.wrapper).find('input[type="checkbox"]').change(function() {
 			me.set_roles_in_table();
-			me.frm.dirty();
+			cur_frm.dirty();
 		});
 		$(this.wrapper).find('.user-role a').click(function() {
 			me.show_permissions($(this).parent().attr('data-user-role'))
@@ -69,7 +68,7 @@ frappe.RoleEditor = Class.extend({
 			.each(function(i, checkbox) { checkbox.checked = false; });
 
 		// set user roles as checked
-		$.each((me.frm.doc.roles || []), function(i, user_role) {
+		$.each((cur_frm.doc.roles || []), function(i, user_role) {
 				var checkbox = $(me.wrapper)
 					.find('[data-user-role="'+user_role.role+'"] input[type="checkbox"]').get(0);
 				if(checkbox) checkbox.checked = true;
@@ -79,9 +78,8 @@ frappe.RoleEditor = Class.extend({
 		var opts = this.get_roles();
 		var existing_roles_map = {};
 		var existing_roles_list = [];
-		var me = this;
 
-		$.each((me.frm.doc.roles || []), function(i, user_role) {
+		$.each((cur_frm.doc.roles || []), function(i, user_role) {
 				existing_roles_map[user_role.role] = user_role.name;
 				existing_roles_list.push(user_role.role);
 			});
@@ -96,7 +94,7 @@ frappe.RoleEditor = Class.extend({
 		// add new roles that are checked
 		$.each(opts.checked_roles, function(i, role) {
 			if(existing_roles_list.indexOf(role)==-1) {
-				var user_role = frappe.model.add_child(me.frm.doc, "Has Role", "roles");
+				var user_role = frappe.model.add_child(cur_frm.doc, "Has Role", "roles");
 				user_role.role = role;
 			}
 		});

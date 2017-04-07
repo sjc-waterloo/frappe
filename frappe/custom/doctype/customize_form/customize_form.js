@@ -45,8 +45,6 @@ frappe.ui.form.on("Customize Form", {
 					frm.trigger("setup_sortable");
 				}
 			});
-		} else {
-			frm.refresh();
 		}
 	},
 

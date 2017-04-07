@@ -39,7 +39,7 @@ frappe.views.ListSidebar = Class.extend({
 		}
 		//show link for kanban view
 		this.sidebar.find('.list-link[data-view="Kanban"]').removeClass('hide');
-		if(this.doctype === "Communication" && frappe.boot.email_accounts.length) {
+		if(this.doctype === "Communication"){
 			this.sidebar.find('.list-link[data-view="Inbox"]').removeClass('hide');
 			show_list_link = true;
 		}
@@ -50,13 +50,13 @@ frappe.views.ListSidebar = Class.extend({
 
 		this.current_view = 'List';
 		var route = frappe.get_route();
-		if(route.length > 2 && frappe.views.view_modes.includes(route[2])) {
+		if(route.length > 2 && in_list(['Gantt', 'Image', 'Kanban', 'Calendar', 'Inbox'], route[2])) {
 			this.current_view = route[2];
 
 			if(this.current_view === 'Kanban') {
 				this.kanban_board = route[3];
 			} else if (this.current_view === 'Inbox') {
-				this.email_account = route[3];
+				this.email_account = route[3] || frappe.boot.all_accounts;
 			}
 		}
 
@@ -90,7 +90,7 @@ frappe.views.ListSidebar = Class.extend({
 				if(!r.ref_doctype || r.ref_doctype==me.doctype) {
 					var report_type = r.report_type==='Report Builder'
 						? 'Report/' + r.ref_doctype : 'query-report';
-					var route = r.route || report_type + '/' + r.title;
+					var route = r.route || report_type + '/' + r.name;
 
 					if(added.indexOf(route)===-1) {
 						// don't repeat
@@ -102,7 +102,7 @@ frappe.views.ListSidebar = Class.extend({
 						}
 
 						$('<li><a href="#'+ route + '">'
-							+ __(r.title)+'</a></li>').appendTo(dropdown);
+							+ __(r.name)+'</a></li>').appendTo(dropdown);
 					}
 				}
 			});
@@ -122,28 +122,24 @@ frappe.views.ListSidebar = Class.extend({
 		var $dropdown = this.page.sidebar.find('.kanban-dropdown');
 		var divider = false;
 
-		var meta = frappe.get_meta(this.doctype);
-		var boards = meta && meta.__kanban_boards;
+		var boards = frappe.get_meta(this.doctype).__kanban_boards;
 		if (!boards) return;
-
 		boards.forEach(function(board) {
 			var route = ["List", board.reference_doctype, "Kanban", board.name].join('/');
 			if(!divider) {
 				$('<li role="separator" class="divider"></li>').appendTo($dropdown);
 				divider = true;
 			}
-			$(`<li><a href="#${route}">
-				<span>${__(board.name)}</span>
-				${board.private ? '<i class="fa fa-lock fa-fw text-warning"></i>' : ''}
-			</a></li>`).appendTo($dropdown);
+			$(`<li><a href="#${route}">${__(board.name)}</a></li>`).appendTo($dropdown);
 		});
 
 		$dropdown.find('.new-kanban-board').click(function() {
 			// frappe.new_doc('Kanban Board', {reference_doctype: me.doctype});
 			var select_fields = frappe.get_meta(me.doctype)
 				.fields.filter(function(df) {
-					return df.fieldtype === 'Select' &&
-						df.fieldname !== 'kanban_column';
+					return df.fieldtype === 'Select';
+				}).map(function(df) {
+					return df.fieldname;
 				});
 
 			var fields = [
@@ -153,61 +149,45 @@ frappe.views.ListSidebar = Class.extend({
 					label: __('Kanban Board Name'),
 					reqd: 1
 				}
-			];
+			]
 
 			if(select_fields.length > 0) {
 				fields = fields.concat([{
 					fieldtype: 'Select',
 					fieldname: 'field_name',
 					label: __('Columns based on'),
-					options: select_fields.map(df => df.label).join('\n'),
+					options: select_fields.join('\n'),
 					default: select_fields[0]
 				},
 				{
 					fieldtype: 'Check',
 					fieldname: 'custom_column',
-					label: __('Custom Column'),
+					label: __('Add Custom Column Field'),
 					default: 0,
 					onchange: function(e) {
 						var checked = d.get_value('custom_column');
 						if(checked) {
-							$(d.body).find('.frappe-control[data-fieldname="field_name"]').hide();
+							d.get_input('field_name').prop('disabled', true);
 						} else {
-							$(d.body).find('.frappe-control[data-fieldname="field_name"]').show();
+							d.get_input('field_name').prop('disabled', null);
 						}
 					}
 				}]);
 			}
 
-			if(me.doctype === 'Task') {
-				fields[0].description = __('A new Project with this name will be created');
-			}
-
-			if(['Note', 'ToDo'].includes(me.doctype)) {
-				fields[0].description = __('This Kanban Board will be private');
-			}
-
 			var d = new frappe.ui.Dialog({
 				title: __('New Kanban Board'),
 				fields: fields,
-				primary_action_label: __('Save'),
-				primary_action: function(values) {
-
+				primary_action: function() {
+					var values = d.get_values();
 					var custom_column = values.custom_column !== undefined ?
 						values.custom_column : 1;
-					
-					if(custom_column) {
-						var field_name = 'kanban_column';
-					} else {
-						var field_name =
-							select_fields
-								.find(df => df.label === values.field_name)
-								.fieldname;
-					}
 
 					me.add_custom_column_field(custom_column)
 						.then(function(custom_column) {
-							return me.make_kanban_board(values.board_name, field_name)
+							var f = custom_column ?
+								'kanban_column' : values.field_name;
+							return me.make_kanban_board(values.board_name, f)
 						})
 						.then(function() {
 							d.hide();
@@ -251,16 +231,11 @@ frappe.views.ListSidebar = Class.extend({
 				field_name: field_name
 			},
 			callback: function(r) {
-				var kb = r.message;
-				if(kb.filters) {
-					frappe.provide('frappe.kanban_filters');
-					frappe.kanban_filters[kb.kanban_board_name] = kb.filters;
-				}
 				frappe.set_route(
 					'List',
 					me.doctype,
 					'Kanban',
-					kb.kanban_board_name
+					r.message.kanban_board_name
 				);
 			}
 		});
@@ -272,17 +247,10 @@ frappe.views.ListSidebar = Class.extend({
 
 		var $dropdown = this.page.sidebar.find('.email-account-dropdown');
 		var divider = false;
-
-		if(has_common(roles, ["System Manager", "Administrator"])) {
-			$('<li class="new-email-account"><a>'+ __("New Email Account") +'</a></li>')
-				.appendTo($dropdown)
-		}
-
 		accounts = frappe.boot.email_accounts;
 
 		accounts.forEach(function(account) {
-			email_account = (account.email_id == "All Accounts")? "All Accounts": account.email_account;
-			var route = ["List", "Communication", "Inbox", email_account].join('/');
+			var route = ["List", "Communication", "Inbox", account.email_account].join('/');
 			if(!divider) {
 				$('<li role="separator" class="divider"></li>').appendTo($dropdown);
 				divider = true;

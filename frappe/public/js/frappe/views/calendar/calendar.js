@@ -29,8 +29,7 @@ frappe.views.CalendarView = frappe.views.ListRenderer.extend({
 	},
 	required_libs: [
 		'assets/frappe/js/lib/fullcalendar/fullcalendar.min.css',
-		'assets/frappe/js/lib/fullcalendar/fullcalendar.min.js',
-		'assets/frappe/js/lib/fullcalendar/locale-all.js'
+		'assets/frappe/js/lib/fullcalendar/fullcalendar.min.js'
 	]
 })
 
@@ -129,7 +128,6 @@ frappe.views.Calendar = Class.extend({
 	setup_options: function() {
 		var me = this;
 		this.cal_options = {
-			locale: frappe.boot.user.language || "en",
 			header: {
 				left: 'title',
 				center: '',
@@ -256,12 +254,10 @@ frappe.views.Calendar = Class.extend({
 		var palette_colors = ['red', 'green', 'blue', 'yellow', 'skyblue', 'orange'];
 		var index = 0;
 
-		if(events) {
-			events = events.map(function(event) {
-				event.className = "fc-bg-" + palette_colors[index];
-				index = (index + 1) % palette_colors.length;
-			})
-		}
+		events = events.map(function(event) {
+			event.className = "fc-bg-" + palette_colors[index];
+			index = (index + 1) % palette_colors.length;
+		})
 	},
 	update_event: function(event, revertFunc) {
 		var me = this;

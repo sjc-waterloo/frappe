@@ -99,48 +99,37 @@ def get_allowed_reports():
 def get_user_page_or_report(parent):
 	roles = frappe.get_roles()
 	has_role = {}
-	column = get_column(parent)
+	field = "title" if parent == 'Page' else "name"
 	
 	# get pages or reports set on custom role
-	for p in frappe.db.sql("""select `tabCustom Role`.{field} as name, `tabCustom Role`.modified, `tabCustom Role`.ref_doctype
+	for p in frappe.db.sql("""select `tabCustom Role`.{field} as name, `tabCustom Role`.modified
 		from `tabCustom Role`, `tabHas Role` where
 			`tabHas Role`.parent = `tabCustom Role`.name and
 			`tabCustom Role`.{field} is not null and `tabHas Role`.role in ({roles})
 			""".format(field=parent.lower(), roles = ', '.join(['%s']*len(roles))), roles, as_dict=1):
 
-		has_role[p.name] = {"modified":p.modified, "title": p.name, "ref_doctype": p.ref_doctype}
-
-	for p in frappe.db.sql("""select distinct
-			tab{parent}.name, tab{parent}.modified, {column}
+		has_role[p.name] = {"modified":p.modified, "title": p.name}
+	
+	if not has_role:
+		for p in frappe.db.sql("""select distinct
+			tab{parent}.name, tab{parent}.modified, tab{parent}.{field} as title
 			from `tabHas Role`, `tab{parent}`
 			where `tabHas Role`.role in ({roles})
-			and `tabHas Role`.parent = `tab{parent}`.name
-		""".format(parent=parent, column=column, roles = ', '.join(['%s']*len(roles))), roles, as_dict=True):
-			if p.name not in has_role:
-				has_role[p.name] = {"modified":p.modified, "title": p.title}
-				if parent == "Report":
-					has_role[p.name].update({'ref_doctype': p.ref_doctype})
-					has_role[p.name].update({'report_type': p.report_type})
+				and `tabHas Role`.parent = `tab{parent}`.name
+				""".format(parent=parent, field=field, roles = ', '.join(['%s']*len(roles))),
+					roles, as_dict=True):
 
-	# pages or reports where role is not set are also allowed
-	for p in frappe.db.sql("""select `tab{parent}`.name, `tab{parent}`.modified, {column}
+			has_role[p.name] = {"modified":p.modified, "title": p.title}
+
+		# pages or reports where role is not set are also allowed
+		for p in frappe.db.sql("""select name, modified, {field} as title
 			from `tab{parent}` where
-			(select count(*) from `tabHas Role`
-		where `tabHas Role`.parent=tab{parent}.name) = 0""".format(parent=parent, column=column), as_dict=1):
-			if p.name not in has_role:	
-				has_role[p.name] = {"modified":p.modified, "title": p.title}
-				if parent == "Report":
-					has_role[p.name].update({'ref_doctype': p.ref_doctype})
-					has_role[p.name].update({'report_type': p.report_type})
+				(select count(*) from `tabHas Role`
+					where `tabHas Role`.parent=tab{parent}.name) = 0""".format(parent=parent, field=field), as_dict=1):
+
+			has_role[p.name] = {"modified":p.modified, "title": p.title}
 
 	return has_role
-	
-def get_column(doctype):
-	column = "`tabPage`.title as title"
-	if doctype == "Report":
-		column = "`tabReport`.name as name, `tabReport`.name as title, `tabReport`.ref_doctype, `tabReport`.report_type"
-
-	return column
 
 def load_translations(bootinfo):
 	messages = frappe.get_lang_dict("boot")

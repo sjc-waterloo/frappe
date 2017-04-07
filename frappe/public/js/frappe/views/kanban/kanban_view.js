@@ -4,11 +4,6 @@ frappe.views.KanbanView = frappe.views.ListRenderer.extend({
 	name: 'Kanban',
 	render_view: function(values) {
 		var board_name = this.get_board_name();
-		if(this.kanban && board_name === this.kanban.board_name) {
-			this.kanban.update_cards(values);
-			return;
-		}
-
 		this.kanban = new frappe.views.KanbanBoard({
 			doctype: this.doctype,
 			board_name: board_name,
@@ -46,13 +41,7 @@ frappe.views.KanbanView = frappe.views.ListRenderer.extend({
 			var kb = this.meta.__kanban_boards.find(
 				board => board.name === board_name
 			);
-			frappe.kanban_filters[board_name] = JSON.parse(kb && kb.filters || '[]');
-		}
-		if(typeof frappe.kanban_filters[board_name] === 'string') {
-			frappe.kanban_filters[board_name] =
-				JSON.parse(
-					frappe.kanban_filters[board_name] || '[]'
-				)
+			frappe.kanban_filters[board_name] = JSON.parse(kb && kb.filters || "[]");
 		}
 		var filters = frappe.kanban_filters[board_name];
 		return filters;
@@ -60,11 +49,14 @@ frappe.views.KanbanView = frappe.views.ListRenderer.extend({
 	set_defaults: function() {
 		this._super();
 		this.no_realtime = true;
-		this.show_no_result = false;
 		this.page_title = __(this.get_board_name());
 	},
 	get_board_name: function() {
 		var route = frappe.get_route();
+		if(!route[3] || !this.meta.__kanban_boards.find(b => b.name === route[3])) {
+			frappe.throw(__(`Kanban Board <b>${route[3] || ''}</b> not found`));
+			return;
+		}
 		return route[3];
 	},
 	get_header_html: function() {

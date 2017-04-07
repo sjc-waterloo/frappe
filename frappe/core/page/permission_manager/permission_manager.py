@@ -29,9 +29,9 @@ def get_permissions(doctype=None, role=None):
 		if doctype:
 			out = [p for p in out if p.parent == doctype]
 	else:
-		out = frappe.get_all('Custom DocPerm', fields='*', filters=dict(parent = doctype), order_by="permlevel")
+		out = frappe.get_all('Custom DocPerm', fields='*', filters=dict(parent = doctype))
 		if not out:
-			out = frappe.get_all('DocPerm', fields='*', filters=dict(parent = doctype), order_by="permlevel")
+			out = frappe.get_all('DocPerm', fields='*', filters=dict(parent = doctype))
 
 	linked_doctypes = {}
 	for d in out:

@@ -288,7 +288,7 @@ frappe.wiz.WizardSlide = Class.extend({
 		var me = this;
 
 		// prev
-		if(this.id > 0) {
+		/*if(this.id > 0) {
 			this.$prev = this.$body.find('.prev-btn')
 				.removeClass("hide")
 				.attr('tabIndex', 0)
@@ -296,7 +296,7 @@ frappe.wiz.WizardSlide = Class.extend({
 					me.prev();
 				})
 				.css({"margin-right": "10px"});
-		}
+		}*/
 
 		// next or complete
 		if(this.id+1 < this.wiz.slides.length) {
@@ -371,7 +371,7 @@ function load_frappe_slides() {
 
 		fields: [
 			{ fieldname: "language", label: __("Select Your Language"), reqd:1,
-				fieldtype: "Select", "default": "english" },
+				fieldtype: "Select", "default": "繁體中文" },
 		],
 
 		onload: function(slide) {
@@ -382,7 +382,7 @@ function load_frappe_slides() {
 			}
 		},
 
-		css_class: "single-column",
+		css_class: "hidden",	//"single-column",
 		load_languages: function(slide) {
 			frappe.call({
 				method: "frappe.desk.page.setup_wizard.setup_wizard.load_languages",
@@ -392,7 +392,7 @@ function load_frappe_slides() {
 					frappe.wiz.welcome.setup_fields(slide);
 
 					var language_field = slide.get_field("language");
-					language_field.set_input(frappe.wiz.welcome.data.default_language || "english");
+					language_field.set_input("繁體中文");
 
 					if (!frappe.wiz._from_load_messages) {
 						language_field.$input.trigger("change");
@@ -400,7 +400,8 @@ function load_frappe_slides() {
 
 					delete frappe.wiz._from_load_messages;
 
-					moment.locale("en");
+					moment.locale("zh-TW");
+					slide.next_or_complete();
 				}
 			});
 		},
@@ -425,6 +426,7 @@ function load_frappe_slides() {
 					callback: function(r) {
 						frappe.wiz._from_load_messages = true;
 						frappe.wizard.refresh_slides();
+						slide.next_or_complete();
 					}
 				});
 			});
@@ -452,19 +454,29 @@ function load_frappe_slides() {
 				frappe.wiz.region.bind_events(slide);
 			};
 
-			if(frappe.wiz.regional_data) {
+			frappe.call({
+					method:"frappe.geo.country_info.get_country_timezone_info",
+					callback: function(data) {
+						frappe.wiz.regional_data = data.message;
+						_setup();
+						slide.next_or_complete();
+					}
+				});
+			/*if(frappe.wiz.regional_data) {
 				_setup();
+				//slide.next_or_complete();
 			} else {
 				frappe.call({
 					method:"frappe.geo.country_info.get_country_timezone_info",
 					callback: function(data) {
 						frappe.wiz.regional_data = data.message;
 						_setup();
+						//slide.next_or_complete();
 					}
 				});
-			}
+			}*/
 		},
-		css_class: "single-column",
+		css_class: "hidden",	//"single-column",
 		setup_fields: function(slide) {
 			var data = frappe.wiz.regional_data;
 
@@ -482,16 +494,20 @@ function load_frappe_slides() {
 			// set values if present
 			if(frappe.wizard.values.country) {
 				slide.get_field("country").set_input(frappe.wizard.values.country);
-			} else if (data.default_country) {
+			} else if (data.default_country) {//改預設
 				slide.get_field("country").set_input(data.default_country);
 			}
 
 			if(frappe.wizard.values.currency) {
 				slide.get_field("currency").set_input(frappe.wizard.values.currency);
+			}else {//改預設
+				slide.get_field("currency").set_input(data.country_info[data.default_country].currency);
 			}
 
 			if(frappe.wizard.values.timezone) {
 				slide.get_field("timezone").set_input(frappe.wizard.values.timezone);
+			}else {//改預設
+				slide.get_field("timezone").set_input(data.country_info[data.default_country].timezones);
 			}
 
 		},
@@ -505,7 +521,7 @@ function load_frappe_slides() {
 				$timezone.empty();
 
 				// add country specific timezones first
-				if(country) {
+				if(country) {	
 					var timezone_list = data.country_info[country].timezones || [];
 					$timezone.add_options(timezone_list.sort());
 					slide.get_field("currency").set_input(data.country_info[country].currency);
@@ -544,42 +560,42 @@ function load_frappe_slides() {
 
 
 	frappe.wiz.user = {
-		domains: ["all"],
-		title: __("The First User: You"),
-		icon: "fa fa-user",
-		fields: [
-			{"fieldname": "full_name", "label": __("Full Name"), "fieldtype": "Data",
-				reqd:1},
-			{"fieldname": "email", "label": __("Email Address"), "fieldtype": "Data",
-				reqd:1, "description": __("Login id"), "options":"Email"},
-			{"fieldname": "password", "label": __("Password"), "fieldtype": "Password",
-				reqd:1},
-			{fieldtype:"Attach Image", fieldname:"attach_user",
-				label: __("Attach Your Picture"), is_private: 0},
-		],
-		help: __('The first user will become the System Manager (you can change this later).'),
-		onload: function(slide) {
-			if(user!=="Administrator") {
-				slide.form.fields_dict.password.$wrapper.toggle(false);
-				slide.form.fields_dict.email.$wrapper.toggle(false);
-				if(frappe.boot.user.first_name || frappe.boot.user.last_name) {
-					slide.form.fields_dict.full_name.set_input(
-						[frappe.boot.user.first_name, frappe.boot.user.last_name].join(' ').trim());
-				}
+        domains: ["all"],
+        title: __("The First User: You"),
+        icon: "fa fa-user",
+        fields: [
+                    {"fieldname": "full_name", "label": __("Full Name"), "fieldtype": "Data",
+			                reqd:1, "default": "MM"},
+			        {"fieldname": "email", "label": __("Email Address"), "fieldtype": "Data",
+			                reqd:1, "description": __("Login id"), "options":"Email", "default": "service@moshimori.com"},
+			        {"fieldname": "password", "label": __("Password"), "fieldtype": "Password",
+			                reqd:1, "default": "admin"},
+			        {fieldtype:"Attach Image", fieldname:"attach_user",
+			                label: __("Attach Your Picture"), is_private: 0},
+        ],
+        help: __('The first user will become the System Manager (you can change this later).'),
+        onload: function(slide) {
+                if(user!=="Administrator") {
+                        slide.form.fields_dict.password.$wrapper.toggle(false);
+                        slide.form.fields_dict.email.$wrapper.toggle(false);
+                        slide.form.fields_dict.first_name.set_input(frappe.boot.user.first_name);
+                        slide.form.fields_dict.last_name.set_input(frappe.boot.user.last_name);
 
-				var user_image = frappe.get_cookie("user_image");
-				if(user_image) {
-					var $attach_user = slide.form.fields_dict.attach_user.$wrapper;
-					$attach_user.find(".missing-image").toggle(false);
-					$attach_user.find("img").attr("src", decodeURIComponent(user_image)).toggle(true);
-				}
+                        var user_image = frappe.get_cookie("user_image");
+                        if(user_image) {
+                                var $attach_user = slide.form.fields_dict.attach_user.$wrapper;
+                                $attach_user.find(".missing-image").toggle(false);
+                                $attach_user.find("img").attr("src", decodeURIComponent(user_image)).toggle(true);
+                        }
 
-				delete slide.form.fields_dict.email;
-				delete slide.form.fields_dict.password;
-			}
-		},
-		css_class: "single-column"
-	};
+                        delete slide.form.fields_dict.email;
+                        delete slide.form.fields_dict.password;
+                }
+                slide.next_or_complete();
+        },
+        css_class: "hidden"	//"single-column"
+    };
+
 };
 
 frappe.wiz.on("before_load", function() {

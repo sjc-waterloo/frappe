@@ -12,17 +12,20 @@ frappe.ui.toolbar.Toolbar = Class.extend({
 
 		this.setup_sidebar();
 
-		var awesome_bar = new frappe.search.AwesomeBar();
-		awesome_bar.setup("#navbar-search");
-		awesome_bar.setup("#modal-search");
+		this.awesome_bar = new frappe.search.AwesomeBar();
+		this.awesome_bar.setup("#navbar-search");
+		this.awesome_bar.setup("#modal-search");
 
-		this.setup_help();
+		this.search = this.awesome_bar.search;
+		this.help = this.awesome_bar.help;
 
 		$(document).on("notification-update", function() {
 			frappe.ui.notifications.update_notifications();
 		});
 
 		$('.dropdown-toggle').dropdown();
+
+		this.setup_help();
 
 		$(document).trigger('toolbar_setup');
 
@@ -78,12 +81,6 @@ frappe.ui.toolbar.Toolbar = Class.extend({
 	},
 
 	setup_help: function () {
-		frappe.provide('frappe.help');
-		frappe.help.show_results = show_results;
-
-		this.search = new frappe.search.SearchDialog();
-		frappe.provide('frappe.searchdialog');
-		frappe.searchdialog.search = this.search;
 
 		$(".dropdown-help .dropdown-toggle").on("click", function () {
 			$(".dropdown-help input").focus();
@@ -157,8 +154,12 @@ frappe.ui.toolbar.Toolbar = Class.extend({
 
 		var me = this;
 		function show_help_results(keywords) {
-			me.search.init_search(keywords, "help");
+			me.search.search_dialog.show();
+			me.search.setup_search(keywords, [me.help]);
 		}
+
+		frappe.provide('frappe.help');
+		frappe.help.show_results = show_results;
 
 		function show_results(e) {
 			//edit links

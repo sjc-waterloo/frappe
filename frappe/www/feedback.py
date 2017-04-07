@@ -7,13 +7,8 @@ def get_context(context):
 	reference_doctype = frappe.form_dict.get("reference_doctype")
 	reference_name = frappe.form_dict.get("reference_name")
 
-	if not all([reference_name, reference_doctype]) or \
-		not frappe.db.get_value(reference_doctype, reference_name):
-		
-		return {
-			"is_valid_request": False,
-			"error_message": "Invalid reference doctype and reference name"
-		}
+	if not all([reference_name, reference_doctype]):
+		return {}
 
 	communications = frappe.get_all("Communication", filters={
 		"reference_doctype": reference_doctype,
@@ -25,17 +20,14 @@ def get_context(context):
 		"reference_doctype": reference_doctype,
 		"reference_name": reference_name,
 		"comment_list": communications,
-		"is_communication": True,
-		"is_valid_request": True
+		"is_communication": True
 	}
 
 @frappe.whitelist(allow_guest=True)
 def accept(key, sender, reference_doctype, reference_name, feedback, rating, fullname):
 	""" save the feedback in communication """
-	if not reference_doctype and not reference_name or \
-		not frappe.db.get_value(reference_doctype, reference_name):
-
-		frappe.throw("Invalid reference doctype and reference name")
+	if not reference_doctype and not reference_name:
+		frappe.throw("Invalid Reference Doctype, Reference Name")
 
 	if not rating or not feedback:
 		frappe.throw("Please give both Rating and Detailed Feedback")

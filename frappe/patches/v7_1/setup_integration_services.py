@@ -3,7 +3,6 @@ import frappe
 from frappe.exceptions import DataError
 from frappe.utils.password import get_decrypted_password
 from frappe.utils import cstr
-import os
 
 app_list = [
 	{"app_name": "razorpay_integration", "service_name": "Razorpay", "doctype": "Razorpay Settings", "remove": True},
@@ -12,6 +11,8 @@ app_list = [
 ]
 
 def execute():
+	frappe.reload_doc("integration_broker", "doctype", "integration_service")
+
 	installed_apps = frappe.get_installed_apps()
 
 	for app_details in app_list:
@@ -33,14 +34,6 @@ def setup_integration_service(app_details, settings=None):
 
 	setup_service_settings(app_details["service_name"], settings)
 
-	doc_path = frappe.get_app_path("frappe", "integration_broker", "doctype",
-		"integration_service", "integration_service.json")
-
-	if not os.path.exists(doc_path):
-		return
-
-	frappe.reload_doc("integration_broker", "doctype", "integration_service")
-
 	if frappe.db.exists("Integration Service", app_details["service_name"]):
 		integration_service = frappe.get_doc("Integration Service", app_details["service_name"])
 	else:
@@ -56,9 +49,9 @@ def get_app_settings(app_details):
 	doctype = docname = app_details["doctype"]
 
 	app_settings = get_parameters(app_details)
-	if app_settings:
+	if app_settings:		
 		settings = app_settings["settings"]
-		frappe.reload_doc("integrations", "doctype", "{0}_settings".format(app_details["service_name"].lower()))
+		frappe.reload_doc("integrations", "doctype", 			"{0}_settings".format(app_details["service_name"].lower()))
 		controller = frappe.get_meta("{0} Settings".format(app_details["service_name"]))
 
 		for d in controller.fields:
@@ -93,7 +86,7 @@ def get_parameters(app_details):
 	elif app_details["service_name"] == "Dropbox":
 		doc = frappe.db.get_value(app_details["doctype"], None,
 			["dropbox_access_key", "dropbox_access_secret", "upload_backups_to_dropbox"], as_dict=1)
-
+		
 		if not doc:
 			return
 
@@ -106,8 +99,7 @@ def get_parameters(app_details):
 				"app_secret_key": frappe.conf.dropbox_secret_key,
 				"dropbox_access_key": doc.dropbox_access_key,
 				"dropbox_access_secret": doc.dropbox_access_secret,
-				"backup_frequency": doc.upload_backups_to_dropbox,
-				"enabled": doc.send_backups_to_dropbox
+				"backup_frequency": doc.upload_backups_to_dropbox
 			}
 		}
 

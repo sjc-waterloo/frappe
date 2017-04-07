@@ -2,7 +2,8 @@
 # MIT License. See license.txt
 
 from __future__ import unicode_literals
-import json, subprocess, os
+import os
+import json
 from semantic_version import Version
 import frappe
 from frappe.utils import cstr
@@ -90,18 +91,10 @@ def get_versions():
 		}"""
 	versions = {}
 	for app in frappe.get_installed_apps(sort=True):
-		app_hooks = frappe.get_hooks(app_name=app)
 		versions[app] = {
-			"title": app_hooks.get("app_title")[0],
-			"description": app_hooks.get("app_description")[0],
-			"branch": get_app_branch(app)
+			"title": frappe.get_hooks("app_title", app_name=app)[0],
+			"description": frappe.get_hooks("app_description", app_name=app)[0]
 		}
-
-		if versions[app]['branch'] != 'master':
-			branch_version = app_hooks.get('{0}_version'.format(versions[app]['branch']))
-			if branch_version:
-				versions[app]['branch_version'] = branch_version[0]
-
 		try:
 			versions[app]["version"] = frappe.get_attr(app + ".__version__")
 		except AttributeError:
@@ -109,10 +102,4 @@ def get_versions():
 
 	return versions
 
-def get_app_branch(app):
-	'''Returns branch of an app'''
-	try:
-		return subprocess.check_output('cd ../apps/{0} && git rev-parse --abbrev-ref HEAD'.format(app),
-			shell=True).strip()
-	except Exception as e:
-		return ''
+

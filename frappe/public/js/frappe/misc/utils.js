@@ -518,8 +518,27 @@ frappe.utils = {
 		frappe.msgprint("Note: Changing the Page Name will break previous URL to this page.");
 	},
 
+	if_notify_permitted: function(callback) {
+		if (Notify.needsPermission) {
+			Notify.requestPermission(callback);
+		} else {
+			callback && callback();
+		}
+	},
+
 	notify: function(subject, body, route, onclick) {
-		console.log('push notifications are evil and deprecated');
+		if(!route) route = "messages";
+		if(!onclick) onclick = function() {
+			frappe.set_route(route);
+		}
+
+		frappe.utils.if_notify_permitted(function() {
+			var notify = new Notify(subject, {
+			    body: body.replace(/<[^>]*>/g, ""),
+			    notifyClick: onclick
+			});
+			notify.show();
+		});
 	},
 
 	set_title: function(title) {

@@ -25,7 +25,6 @@ frappe.standard_pages["query-report"] = function() {
 frappe.views.QueryReport = Class.extend({
 	init: function(opts) {
 		$.extend(this, opts);
-		this.flags = {};
 		// globalify for slickgrid
 		this.page = this.parent.page;
 		this.parent.query_report = this;
@@ -43,7 +42,7 @@ frappe.views.QueryReport = Class.extend({
 		this.wrapper = $("<div>").appendTo(this.page.main);
 		$('<div class="waiting-area" style="display: none;"></div>\
 		<div class="no-report-area msg-box no-border" style="display: none;"></div>\
-		<div class="chart_area" style="border-bottom: 1px solid #d1d8dd; padding-bottom: 1px"></div>\
+		<div class="chart_area" style="border-bottom: 1px solid #d1d8dd; padding-bottom: 10px"></div>\
 		<div class="results" style="display: none;">\
 			<div class="result-area" style="height:400px;"></div>\
 			<button class="btn btn-secondary btn-default btn-xs expand-all hidden" style="margin: 10px;">'+__('Expand All')+'</button>\
@@ -89,9 +88,8 @@ frappe.views.QueryReport = Class.extend({
 			}, me.report_doc.letter_head);
 		}, true);
 
-		this.page.add_menu_item(__('Export'), function() {
-			me.make_export();
-		}, true);
+		this.page.add_menu_item(__('Export'), function() { me.make_export(); },
+			true);
 
 		this.page.add_menu_item(__("Setup Auto Email"), function() {
 			frappe.set_route('List', 'Auto Email Report', {'report' : me.report_name});
@@ -278,7 +276,7 @@ frappe.views.QueryReport = Class.extend({
 	},
 	setup_filters: function() {
 		if(this.setting_filters) return;
-
+		
 		this.clear_filters();
 		var me = this;
 		$.each(frappe.query_reports[this.report_name].filters || [], function(i, df) {
@@ -300,10 +298,6 @@ frappe.views.QueryReport = Class.extend({
 
 				// run report on change
 				f.$input.on("change", function() {
-					if(!me.flags.filters_set) {
-						// don't trigger change while setting filters
-						return;
-					}
 					f.$input.blur();
 					if (f.on_change) {
 						f.on_change(me);
@@ -318,13 +312,12 @@ frappe.views.QueryReport = Class.extend({
 		// hide page form if no filters
 		var $filters = $(this.parent).find('.page-form .filters');
 		$(this.parent).find('.page-form').toggle($filters.length ? true : false);
-
+		
 		this.setting_filters = true;
-		this.set_route_filters();
+		this.set_route_filters()
 		this.setting_filters = false;
-
+		
 		this.set_filters_by_name();
-		this.flags.filters_set = true;
 	},
 	clear_filters: function() {
 		this.filters = [];
@@ -412,7 +405,6 @@ frappe.views.QueryReport = Class.extend({
 			if(v) filters[f.df.fieldname] = v;
 		})
 		if(raise && mandatory_fields.length) {
-			this.chart_area.hide();
 			this.wrapper.find(".waiting-area").empty().toggle(false);
 			this.wrapper.find(".no-report-area").html(__("Please set filters")).toggle(true);
 			if(raise) {
@@ -822,6 +814,8 @@ frappe.views.QueryReport = Class.extend({
 				}
 
 				else if (data.file_format_type == "Excel") {
+
+					me.wrapper.find(".results").toggle(false);
 					try {
 						var filters = me.get_values(true);
 					} catch(e) {
@@ -865,7 +859,7 @@ frappe.views.QueryReport = Class.extend({
 		});
 
 		this.chart = new frappe.ui.Chart(opts);
-		if(this.chart && opts.data && opts.data.rows && opts.data.rows.length) {
+		if(this.chart) {
 			this.chart_area.toggle(true);
 		}
 	}

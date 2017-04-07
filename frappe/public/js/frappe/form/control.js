@@ -610,40 +610,34 @@ frappe.ui.form.ControlCurrency = frappe.ui.form.ControlFloat.extend({
 frappe.ui.form.ControlPercent = frappe.ui.form.ControlFloat;
 
 frappe.ui.form.ControlDate = frappe.ui.form.ControlData.extend({
+	set_input: function(value) {
+		this._super(value);
+		if(value && this.last_value && this.last_value !== this.value) {
+			this.datepicker.selectDate(new Date(value));
+		}
+	},
 	make_input: function() {
 		this._super();
 		this.set_date_options();
 		this.set_datepicker();
 		this.set_t_for_today();
 	},
-	set_input: function(value) {
-		this._super(value);
-		if(value
-			&& ((this.last_value && this.last_value !== this.value)
-				|| (!this.datepicker.selectedDates.length))) {
-			this.datepicker.selectDate(new Date(value));
-		}
-	},
 	set_date_options: function() {
 		var me = this;
-		var lang = frappe.boot.user.language;
-		if(!$.fn.datepicker.language[lang]) {
-			lang = 'en'
-		}
 		this.datepicker_options = {
-			language: lang,
+			language: "en",
 			autoClose: true,
-			todayButton: new Date(),
-			dateFormat: (frappe.boot.sysdefaults.date_format || 'yyyy-mm-dd'),
-			onSelect: function(dateStr) {
-				if(me.setting_date_flag) return;
-				me.set_value(me.get_value());
-				me.$input.trigger('change');
-			},
-			onShow: function() {
-				$('.datepicker--button:visible').text(__('Today'));
-			},
+			todayButton: new Date()
 		};
+
+		var date_format =
+			(frappe.boot.sysdefaults.date_format || 'yyyy-mm-dd');
+		this.datepicker_options.dateFormat = date_format;
+
+		this.datepicker_options.onSelect = function(dateStr) {
+			me.set_value(me.get_value());
+			me.$input.trigger('change');
+		}
 	},
 	set_datepicker: function() {
 		this.$input.datepicker(this.datepicker_options);
@@ -691,23 +685,11 @@ frappe.ui.form.ControlTime = frappe.ui.form.ControlData.extend({
 			onSelect: function(dateObj) {
 				me.set_value(dateObj);
 			},
-			onShow: function() {
-				$('.datepicker--button:visible').text(__('Now'));
-			},
 			todayButton: new Date()
 		});
 		this.datepicker = this.$input.data('datepicker');
 		this.refresh();
-	},
-	set_input: function(value) {
-		this._super(value);
-		if(value
-			&& ((this.last_value && this.last_value !== this.value)
-				|| (!this.datepicker.selectedDates.length))) {
-
-			this.datepicker.selectDate(moment(value, 'hh:mm:ss')._d);
-		}
-	},
+	}
 });
 
 frappe.ui.form.ControlDatetime = frappe.ui.form.ControlDate.extend({
@@ -715,9 +697,6 @@ frappe.ui.form.ControlDatetime = frappe.ui.form.ControlDate.extend({
 		this._super();
 		this.datepicker_options.timepicker = true;
 		this.datepicker_options.timeFormat = "hh:ii:ss";
-		this.datepicker_options.onShow = function() {
-			$('.datepicker--button:visible').text(__('Now'));
-		};
 	},
 	parse: function(value) {
 		if(value) {
@@ -1000,7 +979,6 @@ frappe.ui.form.ControlAttach = frappe.ui.form.ControlData.extend({
 		this.upload_options = {
 			parent: this.dialog.get_field("upload_area").$wrapper,
 			args: {},
-			allow_multiple: 0,
 			max_width: this.df.max_width,
 			max_height: this.df.max_height,
 			options: this.df.options,
@@ -1603,7 +1581,6 @@ frappe.ui.form.ControlTextEditor = frappe.ui.form.ControlCode.extend({
 		this.has_input = true;
 		this.make_editor();
 		this.hide_elements_on_mobile();
-		this.setup_drag_drop();
 	},
 	make_editor: function() {
 		var me = this;
@@ -1621,20 +1598,11 @@ frappe.ui.form.ControlTextEditor = frappe.ui.form.ControlCode.extend({
 				['style', ['bold', 'italic', 'underline', 'clear']],
 				['fontsize', ['fontsize']],
 				['color', ['color']],
-				['para', ['ul', 'ol', 'paragraph', 'hr']],
-				//['height', ['height']],
+				['para', ['ul', 'ol', 'paragraph']],
+				['height', ['height']],
 				['media', ['link', 'picture', 'video', 'table']],
 				['misc', ['fullscreen', 'codeview']]
 			],
-			keyMap: {
-				pc: {
-					'CTRL+ENTER': ''
-				},
-				mac: {
-					'CMD+ENTER': ''
-				}
-			},
-			prettifyHtml: true,
 			callbacks: {
 				onChange: function(value) {
 					me.parse_validate_and_set_in_model(value);
@@ -1699,41 +1667,6 @@ frappe.ui.form.ControlTextEditor = frappe.ui.form.ControlCode.extend({
 		this.note_editor = $(this.input_area).find('.note-editor');
 		// to fix <p> on enter
 		this.set_input('<div><br></div>');
-	},
-	setup_drag_drop: function() {
-		var me = this;
-		this.note_editor.on('dragenter dragover', false)
-			.on('drop', function(e) {
-				var dataTransfer = e.originalEvent.dataTransfer;
-
-				if (dataTransfer && dataTransfer.files && dataTransfer.files.length) {
-					me.note_editor.focus();
-
-					var files = [].slice.call(dataTransfer.files);
-
-					files.forEach(file => {
-						me.get_image(file, (url) => {
-							me.editor.summernote('insertImage', url, file.name);
-						});
-					});
-				}
-				e.preventDefault();
-				e.stopPropagation();
-			});
-	},
-	get_image: function (fileobj, callback) {
-		var freader = new FileReader(),
-			me = this;
-
-		freader.onload = function() {
-			var dataurl = freader.result;
-			// add filename to dataurl
-			var parts = dataurl.split(",");
-			parts[0] += ";filename=" + fileobj.name;
-			dataurl = parts[0] + ',' + parts[1];
-			callback(dataurl);
-		}
-		freader.readAsDataURL(fileobj);
 	},
 	hide_elements_on_mobile: function() {
 		this.note_editor.find('.note-btn-underline,\

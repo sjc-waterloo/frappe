@@ -22,7 +22,7 @@ def get_info(show_failed=False):
 	jobs = []
 
 	def add_job(j, name):
-		if j.kwargs.get('site')==frappe.local.site:
+		if j.kwargs.get('site')==frappe.local.site or True:
 			jobs.append({
 				'job_name': j.kwargs.get('kwargs', {}).get('playbook_method') \
 					or str(j.kwargs.get('job_name')),
@@ -46,5 +46,6 @@ def get_info(show_failed=False):
 		for q in queues:
 			if q.name == 'failed':
 				for j in q.get_jobs()[:10]: add_job(j, q.name)
+
 
 	return jobs

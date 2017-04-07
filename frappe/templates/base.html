@@ -33,12 +33,16 @@
 		{%- block style %}{%- endblock -%}
 	{%- endblock -%}
     <script>
-		window.frappe = {};
-		frappe.ready_events = [];
-		frappe.ready = function(fn) {
-			frappe.ready_events.push(fn);
-		}
-		window.dev_server = {{ dev_server }};
+    window.frappe = {
+    	page_ready_events: {},
+    	ready: function(fn) {
+    		if (!frappe.page_ready_events[location.pathname]) {
+    			frappe.page_ready_events[location.pathname] = []
+    		}
+    		frappe.page_ready_events[location.pathname].push(fn);
+    	}
+    }
+    window.dev_server = {{ dev_server }};
     </script>
 </head>
 <body data-path="{{ path }}">

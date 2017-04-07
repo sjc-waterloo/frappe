@@ -56,13 +56,6 @@ frappe.ui.Dialog = frappe.ui.FieldGroup.extend({
 				frappe.ui.open_dialogs.push(me);
 				me.focus_on_first_input();
 				me.on_page_show && me.on_page_show();
-			})
-			.on('scroll', function() {
-				var $input = $('input:focus');
-				if($input.length && ['Date', 'Datetime',
-					'Time'].includes($input.attr('data-fieldtype'))) {
-					$input.blur();
-				}
 			});
 
 	},
@@ -86,12 +79,7 @@ frappe.ui.Dialog = frappe.ui.FieldGroup.extend({
 			.html(label)
 			.click(function() {
 				me.primary_action_fulfilled = true;
-				// get values and send it
-				// as first parameter to click callback
-				// if no values then return
-				var values = me.get_values();
-				if(!values) return;
-				click.apply(me, [values]);
+				click.apply(me);
 			});
 	},
 	make_head: function() {

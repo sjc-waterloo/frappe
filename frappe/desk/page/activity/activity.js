@@ -12,23 +12,17 @@ frappe.pages['activity'].on_page_load = function(wrapper) {
 	});
 
 	me.page = wrapper.page;
+
 	me.page.set_title(__("Activity"));
 
 	frappe.model.with_doctype("Communication", function() {
-		me.page.list = new frappe.ui.BaseList({
+		me.page.list = new frappe.ui.Listing({
 			hide_refresh: true,
 			page: me.page,
 			method: 'frappe.desk.page.activity.activity.get_feed',
 			parent: $("<div></div>").appendTo(me.page.main),
-			render_view: function (values) {
-				var me = this;
-				wrapper = me.page.main.find(".result-list").get(0)
-				values.map(function (value) {
-					var row = $('<div class="list-row">')
-						.data("data", value)
-						.appendTo($(wrapper)).get(0);
-					new frappe.activity.Feed(row, value);
-				});
+			render_row: function(row, data) {
+				new frappe.activity.Feed(row, data);
 			},
 			show_filters: true,
 			doctype: "Communication",

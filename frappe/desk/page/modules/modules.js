@@ -28,8 +28,7 @@ frappe.pages['modules'].on_page_load = function(wrapper) {
 
 	// render sidebar
 	page.sidebar.html(frappe.render_template('modules_sidebar',
-		{modules: frappe.get_desktop_icons(true).sort(
-			function(a, b){ return (a._label > b._label) ? 1 : -1 })}));
+		{modules: frappe.get_desktop_icons(true)}));
 
 	// help click
 	page.main.on("click", '.module-section-link[data-type="help"]', function(event) {

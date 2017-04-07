@@ -846,7 +846,7 @@
   "currency_fraction": "Cent",
   "currency_fraction_units": 100,
   "currency_symbol": "\u20ac",
-  "number_format": "# ###,##",
+  "number_format": "#,###.##",
   "timezones": [
    "Europe/Paris"
   ]
@@ -2317,7 +2317,10 @@
   "code": "tw",
   "currency": "TWD",
   "date_format": "yyyy-mm-dd",
-  "number_format": "#,###.##"
+  "number_format": "#,###.##",
+  "timezones": [
+   "Asia/Taipei"
+  ]
  },
  "Tajikistan": {
   "code": "tj",

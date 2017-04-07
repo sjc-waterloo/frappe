@@ -697,7 +697,6 @@ class Document(BaseDocument):
 		def _evaluate_alert(alert):
 			if not alert.name in self.flags.email_alerts_executed:
 				evaluate_alert(self, alert.name, alert.event)
-				self.flags.email_alerts_executed.append(alert.name)
 
 		event_map = {
 			"on_update": "Save",
@@ -709,7 +708,6 @@ class Document(BaseDocument):
 		if not self.flags.in_insert:
 			# value change is not applicable in insert
 			event_map['validate'] = 'Value Change'
-			event_map['before_change'] = 'Value Change'
 
 		for alert in self.flags.email_alerts:
 			event = event_map.get(method, None)
@@ -804,9 +802,7 @@ class Document(BaseDocument):
 		self.notify_update()
 
 		try:
-			frappe.enqueue('frappe.utils.global_search.update_global_search',
-				now=frappe.flags.in_test or frappe.flags.in_install or frappe.flags.in_migrate,
-				doc=self)
+			frappe.enqueue('frappe.utils.global_search.update_global_search', now=frappe.flags.in_test, doc=self)
 		except redis.exceptions.ConnectionError:
 			update_global_search(self)
 

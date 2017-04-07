@@ -22,7 +22,7 @@ frappe.ui.form.on('User', {
 			if(!frm.roles_editor) {
 				var role_area = $('<div style="min-height: 300px">')
 					.appendTo(frm.fields_dict.roles_html.wrapper);
-				frm.roles_editor = new frappe.RoleEditor(role_area, frm);
+				frm.roles_editor = new frappe.RoleEditor(role_area);
 
 				var module_area = $('<div style="min-height: 300px">')
 					.appendTo(frm.fields_dict.modules_html.wrapper);
@@ -84,9 +84,7 @@ frappe.ui.form.on('User', {
 				}
 			}
 			if (!found){
-				frm.add_custom_button(__("Create User Email"), function() {
-					frm.events.create_user_email(frm)
-				})
+				frm.add_custom_button("Create User Email",frm.events.create_user_email)
 			}
 		}
 
@@ -115,29 +113,25 @@ frappe.ui.form.on('User', {
 			frm.toggle_enable('email', doc.__islocal);
 		}
 	},
-
 	create_user_email:function(frm) {
 		frappe.call({
 			method: 'frappe.core.doctype.user.user.has_email_account',
-			args: {
-				email: frm.doc.email
-			},
+			args: {email:cur_frm.doc.email},
 			callback: function(r) {
-				if (r.message == undefined) {
+				if (r["message"]== undefined){
 					frappe.route_options = {
-						"email_id": frm.doc.email,
-						"awaiting_password": 1,
-						"enable_incoming": 1
+						"email_id": cur_frm.doc.email,
+						"awaiting_password":1,
+						"enable_incoming":1
 					};
 					frappe.model.with_doctype("Email Account", function (doc) {
 						var doc = frappe.model.get_new_doc("Email Account");
-						frappe.route_flags.linked_user = frm.doc.name;
-						frappe.route_flags.delete_user_from_locals = true;
-						frappe.set_route("Form", "Email Account", doc.name);
+					frappe.route_flags.create_user_account=cur_frm.doc.name;
+					frappe.set_route("Form", "Email Account", doc.name);
 					})
-				} else {
-					frappe.route_flags.create_user_account = frm.doc.name;					
-					frappe.set_route("Form", "Email Account", r.message[0]["name"]);
+				}else{
+					frappe.route_flags.create_user_account=cur_frm.doc.name;					
+					frappe.set_route("Form", "Email Account", r["message"][0]["name"]);
 				}
 			}
 		})

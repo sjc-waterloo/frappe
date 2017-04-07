@@ -62,6 +62,9 @@ frappe.Application = Class.extend({
 			this.show_notes();
 		}
 
+		// ask to allow notifications
+		frappe.utils.if_notify_permitted();
+
 		// listen to csrf_update
 		frappe.realtime.on("csrf_generated", function(data) {
 			// handles the case when a user logs in again from another tab
@@ -328,7 +331,7 @@ frappe.Application = Class.extend({
 	},
 
 	trigger_primary_action: function() {
-		if(cur_dialog && cur_dialog.display) {
+		if(cur_dialog) {
 			// trigger primary
 			cur_dialog.get_primary_btn().trigger("click");
 		} else if(cur_frm && cur_frm.page.btn_primary.is(':visible')) {
@@ -444,10 +447,6 @@ frappe.get_module = function(m, default_module) {
 
 frappe.get_desktop_icons = function(show_hidden, show_global) {
 	// filter valid icons
-
-	// hidden == hidden from desktop
-	// blocked == no view from modules either
-
 	var out = [];
 
 	var add_to_out = function(module) {
@@ -456,7 +455,7 @@ frappe.get_desktop_icons = function(show_hidden, show_global) {
 		out.push(module);
 	}
 
-	var show_module = function(m) {
+	var show_module = function(module) {
 		var out = true;
 		if(m.type==="page") {
 			out = m.link in frappe.boot.page_info;
@@ -473,7 +472,7 @@ frappe.get_desktop_icons = function(show_hidden, show_global) {
 				out = frappe.boot.user.allow_modules.indexOf(m.module_name) !== -1
 			}
 		}
-		if(m.hidden && !show_hidden) {
+		if(m.hidden&& !show_hidden) {
 			out = false;
 		}
 		if(m.blocked && !show_global) {

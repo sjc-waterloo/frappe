@@ -2,7 +2,7 @@
   min-height: calc(100vh - 252px);
   background-color: #fafbfc;
   display: flex;
-  overflow: auto;
+  overflow: scroll;
 }
 .kanban .kanban-column {
   flex: 0 0 230px;

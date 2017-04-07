@@ -21,7 +21,7 @@ class Contact(Document):
 
 	def validate(self):
 		self.set_user()
-		if self.email_id and not self.image:
+		if self.email_id:
 			self.image = has_gravatar(self.email_id)
 
 		deduplicate_dynamic_links(self)

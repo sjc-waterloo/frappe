@@ -14,22 +14,12 @@ class RolePermissionforPageandReport(Document):
 		name = frappe.db.get_value('Custom Role', args, "name")
 		if name:
 			doc = frappe.get_doc('Custom Role', name)
-			roles = doc.roles
 		else:
-			roles = self.get_standard_roles()
+			doctype = self.set_role_for
+			docname = self.page if self.set_role_for == 'Page' else self.report
+			doc = frappe.get_doc(doctype, docname)
 
-		self.set('roles', roles)
-		
-	def get_standard_roles(self):
-		doctype = self.set_role_for
-		docname = self.page if self.set_role_for == 'Page' else self.report
-		doc = frappe.get_doc(doctype, docname)
-		return doc.roles
-
-	def reset_roles(self):
-		roles = self.get_standard_roles()
-		self.set('roles', roles)
-		self.set_custom_roles()
+		self.set('roles', doc.roles)
 
 	def set_custom_roles(self):
 		args = self.get_args()
@@ -37,13 +27,13 @@ class RolePermissionforPageandReport(Document):
 
 		args.update({
 			'doctype': 'Custom Role',
-			'roles': self.get_roles()
+			'roles': self.roles
 		})
 
 		if name:
-			custom_role = frappe.get_doc("Custom Role", name)
-			custom_role.set('roles', self.get_roles())
-			custom_role.save()
+			doc = frappe.get_doc("Custom Role", name)
+			doc.set('roles', self.roles)
+			doc.save()
 		else:
 			frappe.get_doc(args).insert()
 
@@ -55,14 +45,5 @@ class RolePermissionforPageandReport(Document):
 			check_for_field: name
 		}
 		
-	def get_roles(self):
-		roles = []
-		for data in self.roles:
-			roles.append({
-				'role': data.role,
-				'parenttype': 'Custom Role'
-			})
-		return roles
-
 	def update_status(self):
 		return frappe.render_template

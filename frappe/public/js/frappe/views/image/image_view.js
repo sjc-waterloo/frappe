@@ -27,7 +27,6 @@ frappe.views.ImageView = frappe.views.ListRenderer.extend({
 		return frappe.render_template("image_view_item_row", {
 			data: item,
 			indicator: indicator,
-			subject: this.get_subject_html(item, true),
 			additional_columns: this.additional_columns,
 			item_image: image_url,
 			color: frappe.get_palette(item.item_name)
@@ -43,12 +42,14 @@ frappe.views.ImageView = frappe.views.ListRenderer.extend({
 		}
 		if (url) {
 			return url
+		// 	return "url('" + url + "')";
 		}
 		return null;
 	},
 	get_header_html: function () {
-		var main = frappe.render_template('list_item_main_head', {
-			col: { type: "Subject" },
+		var main = frappe.render_template('image_view_item_main_head', {
+			columns: this.columns,
+			right_column: this.settings.right_column,
 			_checkbox: ((frappe.model.can_delete(this.doctype) || this.settings.selectable)
 				&& !this.no_delete)
 		});
